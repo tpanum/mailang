@@ -5,7 +5,7 @@ Erlang Module to use basic functionality of a mail server: IMAP/POP3.
 
 This is still under heavy development, feel free to help out!
 
-[http://tools.ietf.org/html/rfc3501](IMAP Documentation)
+[IMAP Documentation](http://tools.ietf.org/html/rfc3501)
 
 ### IMAP ###
 Basic usage:
