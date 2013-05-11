@@ -5,4 +5,4 @@
               {applications,[kernel,stdlib]},
               {mod,{mailang_app,[]}},
               {env,[]},
-              {modules,[mailang_app,mailang_sup,mailconnecter]}]}.
+              {modules,[mailang_app,mailang_sup,mailconnector]}]}.
