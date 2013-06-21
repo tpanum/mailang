@@ -5,4 +5,5 @@
               {applications,[kernel,stdlib]},
               {mod,{mailang_app,[]}},
               {env,[]},
-              {modules,[mailang_app,mailang_sup,mailconnector]}]}.
+              {modules,[fetch,mailang_app,mailang_sup,mailconnector,
+                        refactored_fetch,rfc2047]}]}.
