@@ -111,7 +111,7 @@ listener(Sock, Identifier, PreData) ->
 			{ok, Message, Data} -> {ok, Identifier, Data};
 			{uncomplete, Data} -> listener(Sock, Identifier, Data)
 		end
-    after 5000 ->
+    after 10000 ->
 	    timeout
     end.
 

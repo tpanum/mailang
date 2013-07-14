@@ -24,7 +24,7 @@ pass_header([],_) ->
 pass_header([H|T],Header) ->
     case pass_header_line(H) of
         {delimiter,Delimiter} -> pass_content_info(T, Delimiter, Header, [], []);
-        KeyValuePair={_,_} -> pass_header(T, [KeyValuePair|Header]);
+        {K,V} -> pass_header(T, [{K,list_to_binary(V)}|Header]);
         false -> pass_header(T,Header)
     end.
 pass_content_info([],_,_,_,_) ->
@@ -41,8 +41,8 @@ pass_content([],_,_,_,_,_) ->
     erlang:error(unexpected_end);
 pass_content([H|T],Delimiter,Header,ContentInfo,Content, CurrentContents) ->
     case pass_content_line(H, Delimiter) of
-        end_message -> {mail,T,{Header,[{ContentInfo,lists:reverse(Content)}|CurrentContents]}};
-        new_format -> pass_content_info(T,Delimiter,Header,[],[{ContentInfo,lists:reverse(Content)}|CurrentContents]);
+        end_message -> {mail,T,{Header,[{ContentInfo,list_to_binary(lists:reverse(Content))}|CurrentContents]}};
+        new_format -> pass_content_info(T,Delimiter,Header,[],[{ContentInfo,list_to_binary(lists:reverse(Content))}|CurrentContents]);
         {data, Data} -> pass_content(T, Delimiter, Header, ContentInfo, [Data|Content], CurrentContents)
     end.
 
