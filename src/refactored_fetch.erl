@@ -30,6 +30,7 @@ pass_header([H|T],Header) ->
 pass_content_info([],_,_,_,_) ->
     erlang:error(unexpected_end);
 pass_content_info([H|T],Delimiter,Header,ContentInfo, CurrentContents) ->
+    io:format("PassContentInfo : ~p~n", [H]),
     case pass_content_info_line(H) of
         Values when is_list(Values) -> pass_content_info(T, Delimiter, Header, Values++ContentInfo, CurrentContents);
         {attachment, Filename} -> {attachments, RemainingLines, FoundAttachments}=pass_attachment(T, Delimiter, Filename), {partial, RemainingLines, CurrentContents, FoundAttachments};
@@ -40,6 +41,7 @@ pass_content_info([H|T],Delimiter,Header,ContentInfo, CurrentContents) ->
 pass_content([],_,_,_,_,_) ->
     erlang:error(unexpected_end);
 pass_content([H|T],Delimiter,Header,ContentInfo,Content, CurrentContents) ->
+    io:format("PassContent : ~p~n", [H]),
     case pass_content_line(H, Delimiter) of
         end_message -> {mail,T,{Header,[{ContentInfo,list_to_binary(lists:reverse(Content))}|CurrentContents]}};
         new_format -> pass_content_info(T,Delimiter,Header,[],[{ContentInfo,list_to_binary(lists:reverse(Content))}|CurrentContents]);
