@@ -115,7 +115,7 @@ pass_attachment([H|T], Delimiter, Filename, AContent, Attachments) ->
     case pass_attachment_line(H,Delimiter) of
         {data, D} -> pass_attachment(T, Delimiter, Filename, [D|AContent], Attachments);
         end_attachment -> RAContent=lists:append(lists:reverse(AContent)), DecodedContent=base64:decode(RAContent), pass_attachment(T, Delimiter, [], [{Filename, DecodedContent}|Attachments]);
-        end_of_attachments -> RAContent=lists:append(lists:reverse(AContent)), DecodedContent=base64:decode(RAContent), {attachments, T, [{Filename, DecodedContent}|Attachments]}
+        end_of_attachments -> RAContent=lists:append(lists:reverse(AContent)), DecodedContent=base64:decode(RAContent), {attachments, T, [{list_to_binary(Filename), DecodedContent}|Attachments]}
     end.
     
 pass_attachment_line("--"++T,Delimiter) ->

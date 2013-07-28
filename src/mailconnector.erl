@@ -46,12 +46,19 @@ handle_call({examine, MailBox}, _From, State) ->
 	end,
     {reply, Result, State};
 
+
+handle_call({fetch, From, To}, _From, State) ->
+    {reply, multiFetch(From, To, State), State};
+
+handle_call({fetch, Num}, _From, State) when is_integer(Num) ->
+    handle_call({fetch, integer_to_list(Num)}, _From, State);
+
 handle_call({fetch, Num}, _From, State) ->
 	FetchContent = "BODY[]",
 	Output = action(State, string:join(["FETCH", Num, FetchContent], " ")),
 	case Output of
-		{ok, Count, Data} -> io:format("~p~n", [Data]),  Result = refactored_fetch:pass(Data);
-		_ -> Result = false
+		{ok, _, ["* NO"++_]} -> Result = false;
+		{ok, Count, Data} -> Result=refactored_fetch:pass(Data)
 	end,
     {reply, Result,State};
 
@@ -69,6 +76,23 @@ terminate(_Reason, _State) ->
 
 code_change(_OldVsn, State, _Extra) ->
     {ok, State}.
+
+multiFetch(From, To, State) when is_list(From) ->
+    multiFetch(list_to_integer(From), To, State);
+multiFetch(From, To, State) ->
+    multiFetch(From, To, State, []).
+
+multiFetch(From, To, State, Mails) when is_list(From) ->
+    multiFetch(string:to_integer(From), To, State, Mails);
+multiFetch(From, To="*", State, Mails) ->
+    Result=handle_call({fetch, From}, false, State),
+    case Result of
+           {_,false,_} -> case Mails of
+                              [] -> false;
+                              _ -> lists:reverse(Mails)
+                          end;
+           {_, [Mail],NewState} -> multiFetch(From+1, To, NewState, [Mail|Mails])
+    end.
 
 get_content_fetch(Count, FetchContent, Data) ->
 	[FirstElement|Tail] = Data,
@@ -97,9 +121,6 @@ fetch(_State = Socket) ->
 	io:format("~p~n", [Message]),
 	gen_tcp:send(Socket, Message),
 	listener(Socket, Identifier).
-
-% process_fetch(Message, Count) ->
-% 	StringCount = lists:flatten(io_lib:format("~p", [Count])),
 
 listener(Sock, Identifier) ->
     listener(Sock,Identifier, []).
