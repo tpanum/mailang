@@ -6,7 +6,7 @@
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2, terminate/2, code_change/3, search_prefix/2]).
 
 start_link(Host, imap) ->
-    gen_server:start_link({local, ?MODULE}, ?MODULE, [Host, 143], []).
+    gen_server:start_link({Host, local}, ?MODULE, [Host, 143], []).
 
 stop() ->
 	gen_server:call(?MODULE, stop).
@@ -61,7 +61,6 @@ handle_call({fetch, Num}, _From, State) ->
 		{ok, Count, Data} -> Result=refactored_fetch:pass(Data)
 	end,
     {reply, Result,State};
-
 handle_call(_Command, _From, _State) ->
     {reply, not_valid, _State}.
 

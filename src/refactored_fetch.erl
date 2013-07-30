@@ -1,4 +1,4 @@
--module(refactored_fetch).
+ -module(refactored_fetch).
 -compile([export_all]).
 
 -ifdef(TEST).

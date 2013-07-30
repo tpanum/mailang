@@ -153,29 +153,23 @@ pass_attachment(Lines, Delimiter) ->
 
 pass_attachment([],_,{AHeader,AContent}) ->
     RAContent=lists:append(lists:reverse(AContent)),
-    DecodedContent=base64:decode(RAContent),
-    {AHeader, DecodedContent};
-pass_attachment([H|T], Delimiter, {AHeader, AContent}) ->
-    case pass_attachment_line(H,Delimiter) of
-        {data, D} -> pass_attachment(T, Delimiter,{AHeader,[D|AContent]});
-        header -> pass_attachment(T, Delimiter,{AHeader, AContent});
-        end_attachment -> pass_attachment([], Delimiter, {AHeader,AContent});
-        {K, V} -> pass_attachment(T, Delimiter,{[{K,V}|AHeader],AContent})
-    end.
-    
-pass_attachment_line("--"++T,Delimiter) ->
-    End = Delimiter++"--",
-    case T of
-        _ -> end_attachment
-     end;
-pass_attachment_line("Content-Disposition: attachment; filename=\""++T, _) ->
-    {match,[_,{X,Y}]}=re:run(T,"(.+)\"", []),
-    Filename=string:substr(T, X+1, Y),
-    {filename, Filename};
-pass_attachment_line("Content"++_,_)->
-    header;
-pass_attachment_line(Line, _) ->
-    {data, Line}.
+    DecodedContent=base64:decode(RAContent), {AHeader,
+    DecodedContent}; pass_attachment([H|T], Delimiter, {AHeader,
+    AContent}) -> case pass_attachment_line(H,Delimiter) of {data, D}
+    -> pass_attachment(T, Delimiter,{AHeader,[D|AContent]}); header ->
+    pass_attachment(T, Delimiter,{AHeader, AContent}); end_attachment
+    -> pass_attachment([], Delimiter, {AHeader,AContent}); {K, V} ->
+    pass_attachment(T, Delimiter,{[{K,V}|AHeader],AContent}) end.
+    pass_attachment_line("--"++T,Delimiter) -> End = Delimiter++"--",
+    case T of _ -> end_attachment end;
+    pass_attachment_line("Content-Disposition: attachment;
+    filename=\""++T, _) -> {match,[_,{X,Y}]}=re:run(T,"(.+)\"", []),
+    Filename=string:substr(T, X+1, Y), {filename, Filename};
+    pass_attachment_line("Content-ID:"++T, _) -> {match,[{_,_},{X,Y}]}
+    = re:run(T,"[\s]*<([a-zA-Z0-9\-]+)",[]),
+    ContentID=string:substr(T, X+1, Y), {contentid,ContentID};
+    pass_attachment_line("Content"++_,_)-> header;
+    pass_attachment_line(Line, _) -> {data, Line}.
 
 
 pass_content("--"++T,Delimiter) ->
