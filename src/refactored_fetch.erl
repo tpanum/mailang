@@ -75,7 +75,7 @@ pass_header_line(_) ->
 pass_content_info_line("Content-Disposition: attachment; filename=\""++T) ->
     {match,[_,{X,Y}]}=re:run(T,"(.+)\"", []),
     Filename=string:substr(T, X+1, Y),
-    {attachment, Filename};        
+    {attachment, list_to_binary(Filename)};        
 pass_content_info_line("Content-Type: multipart/related;"++T) ->
     multipart;
 pass_content_info_line("Content-Type: "++T) ->
