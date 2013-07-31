@@ -95,7 +95,8 @@ pass_content_info_line("Content-D"++_) ->
     end_content_info;
 pass_content_info_line("Content-ID:"++T) -> 
     {match,[{_,_},{X,Y}]}=re:run(T,"[\s]*<([a-zA-Z0-9\-]+)"),
-    ContentID=string:substr(T, X+1, Y), {contentid,list_to_binary(ContentID)};
+    ContentID=string:substr(T, X+1, Y),
+    [{contentid,list_to_binary(ContentID)}];
 pass_content_info_line(X) ->
     false.
 
