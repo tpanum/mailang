@@ -33,7 +33,7 @@ pass_content_info([H|T],Delimiter,Header,ContentInfo, CurrentContents) ->
     io:format("PassContentInfo : ~p~n", [H]),
     case pass_content_info_line(H) of
         Values when is_list(Values) -> pass_content_info(T, Delimiter, Header, Values++ContentInfo, CurrentContents);
-        {attachment, Filename} -> {attachments, RemainingLines, FoundAttachments}=pass_attachment(T, Delimiter, Filename), {partial, RemainingLines, CurrentContents, FoundAttachments};
+        {attachment, Filename} -> {attachments, RemainingLines, FoundAttachments}=pass_attachment(T, Delimiter, [{filename,Filename}|ContentInfo]), {partial, RemainingLines, CurrentContents, FoundAttachments};
         multipart -> {partial, PRemainingLines, PCurrentContents, PAttachment}=pass_header(T,[]), {mail, PRemainingLines, {Header,PCurrentContents++CurrentContents, PAttachment}};
         end_content_info -> pass_content(T,Delimiter,Header,ContentInfo,[],CurrentContents);
         false -> pass_content_info(T,Delimiter, Header, ContentInfo, CurrentContents)
@@ -79,15 +79,23 @@ pass_content_info_line("Content-Disposition: attachment; filename=\""++T) ->
 pass_content_info_line("Content-Type: multipart/related;"++T) ->
     multipart;
 pass_content_info_line("Content-Type: "++T) ->
-    case re:run(T,"([a-zA-Z0-9\/]+); charset=\"(.+)\"") of
-        {match,[_,{X,Y},{Z,V}]} ->
+    case re:run(T,"([a-zA-Z0-9\/]+);") of
+        {match,[_,{X,Y}]} ->
             Contenttype=string:substr(T, X+1, Y),
-            Charset=string:substr(T, Z+1, V),
-            [{contenttype, type_to_atom(Contenttype)},{charset,encoding_to_atom(Charset)}];
-        nomatch -> false
-    end;
+            Result=[{contenttype, type_to_atom(Contenttype)}];
+        nomatch -> Result=[]
+    end,
+    case re:run(T,"charset=\"(.+)\"") of
+        {match,[_,{Z,V}]} -> Charset=string:substr(T, Z+1, V),
+                             SecondResult=[{charset,encoding_to_atom(Charset)}|Result];
+        nomatch -> SecondResult=Result
+    end,
+    SecondResult;
 pass_content_info_line("Content-D"++_) ->
     end_content_info;
+pass_content_info_line("Content-ID:"++T) -> 
+    {match,[{_,_},{X,Y}]}=re:run(T,"[\s]*<([a-zA-Z0-9\-]+)"),
+    ContentID=string:substr(T, X+1, Y), {contentid,list_to_binary(ContentID)};
 pass_content_info_line(X) ->
     false.
 
@@ -102,20 +110,20 @@ pass_content_line("--"++T,Delimiter) ->
 pass_content_line(T, _) ->
     {data, decode_line(T)}.
 
-pass_attachment(Lines, Delimiter, Filename) ->
-    pass_attachment(Lines, Delimiter, Filename,[],[]).
+pass_attachment(Lines, Delimiter, FileInfo) ->
+    pass_attachment(Lines, Delimiter, FileInfo,[],[]).
 
 pass_attachment([H|T],Delimiter,[],Attachments) ->
     case pass_content_info_line(H) of
-        {attachment, Filename} -> pass_attachment(T, Delimiter, Filename, [], Attachments);
+        {attachment, FileInfo} -> pass_attachment(T, Delimiter, FileInfo, [], Attachments);
         _ -> pass_attachment(T, Delimiter, [], Attachments)
     end.
             
-pass_attachment([H|T], Delimiter, Filename, AContent, Attachments) ->
+pass_attachment([H|T], Delimiter, FileInfo, AContent, Attachments) ->
     case pass_attachment_line(H,Delimiter) of
-        {data, D} -> pass_attachment(T, Delimiter, Filename, [D|AContent], Attachments);
-        end_attachment -> RAContent=lists:append(lists:reverse(AContent)), DecodedContent=base64:decode(RAContent), pass_attachment(T, Delimiter, [], [{Filename, DecodedContent}|Attachments]);
-        end_of_attachments -> RAContent=lists:append(lists:reverse(AContent)), DecodedContent=base64:decode(RAContent), {attachments, T, [{list_to_binary(Filename), DecodedContent}|Attachments]}
+        {data, D} -> pass_attachment(T, Delimiter, FileInfo, [D|AContent], Attachments);
+        end_attachment -> RAContent=lists:append(lists:reverse(AContent)), DecodedContent=base64:decode(RAContent), pass_attachment(T, Delimiter, [], [{FileInfo, DecodedContent}|Attachments]);
+        end_of_attachments -> RAContent=lists:append(lists:reverse(AContent)), DecodedContent=base64:decode(RAContent), {attachments, T, [{FileInfo, DecodedContent}|Attachments]}
     end.
     
 pass_attachment_line("--"++T,Delimiter) ->
@@ -129,7 +137,8 @@ pass_attachment_line(Line, _) ->
 type_to_atom(X)->
     case X of
         "text/html" -> html;
-        "text/plain" -> plain
+        "text/plain" -> plain;
+        _ -> list_to_binary(X)
     end.
 
 encoding_to_atom(X) ->
