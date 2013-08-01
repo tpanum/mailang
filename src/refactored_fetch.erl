@@ -1,4 +1,4 @@
--module(refactored_fetch).
+ -module(refactored_fetch).
 -compile([export_all]).
 
 -ifdef(TEST).
@@ -120,6 +120,7 @@ pass_attachment([H|T],Delimiter,FileInfo,Attachments) ->
         {K,V} -> pass_attachment(T, Delimiter, [{K,V}|FileInfo], Attachments);
         _ -> pass_attachment(T, Delimiter, FileInfo, Attachments)
     end.
+
             
 pass_attachment([H|T], Delimiter, FileInfo, AContent, Attachments) ->
     io:format("PassAttachment : ~p~n", [H]),
