@@ -121,6 +121,7 @@ pass_attachment([H|T],Delimiter,[],Attachments) ->
     end.
             
 pass_attachment([H|T], Delimiter, FileInfo, AContent, Attachments) ->
+    io:format("PassAttachment : ~p~n", [H]),
     case pass_attachment_line(H,Delimiter) of
         {data, D} -> pass_attachment(T, Delimiter, FileInfo, [D|AContent], Attachments);
         end_attachment -> RAContent=lists:append(lists:reverse(AContent)), DecodedContent=base64:decode(RAContent), pass_attachment(T, Delimiter, [], [{FileInfo, DecodedContent}|Attachments]);
