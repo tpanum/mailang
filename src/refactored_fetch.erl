@@ -1,4 +1,4 @@
- -module(refactored_fetch).
+-module(refactored_fetch).
 -compile([export_all]).
 
 -ifdef(TEST).
@@ -114,10 +114,11 @@ pass_content_line(T, _) ->
 pass_attachment(Lines, Delimiter, FileInfo) ->
     pass_attachment(Lines, Delimiter, FileInfo,[],[]).
 
-pass_attachment([H|T],Delimiter,[],Attachments) ->
+pass_attachment([H|T],Delimiter,FileInfo,Attachments) ->
     case pass_content_info_line(H) of
-        {attachment, FileInfo} -> pass_attachment(T, Delimiter, FileInfo, [], Attachments);
-        _ -> pass_attachment(T, Delimiter, [], Attachments)
+        {attachment, Filename} -> pass_attachment(T, Delimiter, [{filename, Filename}|FileInfo], [], Attachments);
+        {K,V} -> pass_attachment(T, Delimiter, [{K,V}|FileInfo], Attachments);
+        _ -> pass_attachment(T, Delimiter, FileInfo, Attachments)
     end.
             
 pass_attachment([H|T], Delimiter, FileInfo, AContent, Attachments) ->
