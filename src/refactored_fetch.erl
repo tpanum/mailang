@@ -45,6 +45,7 @@ pass_content([H|T],Delimiter,Header,ContentInfo,Content, CurrentContents) ->
     case pass_content_line(H, Delimiter) of
         end_message -> {mail,T,{Header,[{ContentInfo,list_to_binary(lists:reverse(Content))}|CurrentContents]}};
         new_format -> pass_content_info(T,Delimiter,Header,[],[{ContentInfo,list_to_binary(lists:reverse(Content))}|CurrentContents]);
+        {attachment, NewDelimiter} -> {attachments, RemainingLines, FoundAttachments}=pass_attachment(T, NewDelimiter, []), {mail,RemainingLines,{Header,[{ContentInfo,list_to_binary(lists:reverse(Content))}|CurrentContents], FoundAttachments}};
         {data, Data} -> pass_content(T, Delimiter, Header, ContentInfo, [Data|Content], CurrentContents)
     end.
 
