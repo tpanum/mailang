@@ -6,4 +6,4 @@
               {mod,{mailang_app,[]}},
               {env,[]},
               {modules,[fetch,mailang_app,mailang_sup,mailconnector,
-                        refactored_fetch,rfc2047]}]}.
+                        mailconnector_pop3,refactored_fetch,rfc2047]}]}.

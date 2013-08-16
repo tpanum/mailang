@@ -58,7 +58,7 @@ handle_call({fetch, Num}, _From, State) ->
 	Output = action(State, string:join(["FETCH", Num, FetchContent], " ")),
 	case Output of
 		{ok, _, ["* NO"++_]} -> Result = false;
-		{ok, Count, Data} -> Result=refactored_fetch:pass(Data)
+		{ok, _Count, Data} -> Result=refactored_fetch:pass(Data)
 	end,
     {reply, Result,State};
 handle_call(_Command, _From, _State) ->
@@ -93,31 +93,24 @@ multiFetch(From, To="*", State, Mails) ->
            {_, [Mail],NewState} -> multiFetch(From+1, To, NewState, [Mail|Mails])
     end.
 
-get_content_fetch(Count, FetchContent, Data) ->
-	[FirstElement|Tail] = Data,
-	Prefix = string:join(["*", Count, "FETCH", "("++FetchContent], " "),
-	io:format("~p~n~p~n", [Prefix, FirstElement]),
-	case search_prefix(FirstElement, Prefix) of
-		false -> false;
-		_ ->  [LastElement|RevPureData] = lists:reverse(Tail), [LastChar|RemainingChars] = lists:reverse(LastElement),
-			case LastChar of
-				41 -> lists:reverse(RevPureData	);
-				_ -> false
-			end
-	end.
+% get_content_fetch(_Count, FetchContent, Data) ->
+% 	[FirstElement|Tail] = Data,
+% 	Prefix = string:join(["*", Count, "FETCH", "("++FetchContent], " "),
+% 	io:format("~p~n~p~n", [Prefix, FirstElement]),
+% 	case search_prefix(FirstElement, Prefix) of
+% 		false -> false;
+% 		_ ->  [LastElement|RevPureData] = lists:reverse(Tail), [LastChar|RemainingChars] = lists:reverse(LastElement),
+% 			case LastChar of
+% 				41 -> lists:reverse(RevPureData	);
+% 				_ -> false
+% 			end
+% 	end.
 
 
 action(_State = Socket, Command) ->
         Identifier=uuid:uuid_to_string(uuid:get_v4()),
 	Message = list_to_binary(lists:concat([Identifier, " ", Command, "\r\n"])),
 %	io:format("~p~n", [Message]),
-	gen_tcp:send(Socket, Message),
-	listener(Socket, Identifier).
-
-fetch(_State = Socket) ->
-        Identifier=uuid:uuid_to_string(uuid:get_v4()),
-	Message = list_to_binary(lists:concat([Identifier, "BODY[2]", "\r\n"])),
-	io:format("~p~n", [Message]),
 	gen_tcp:send(Socket, Message),
 	listener(Socket, Identifier).
 
@@ -128,7 +121,7 @@ listener(Sock, Identifier, PreData) ->
     receive
 	{tcp, _Socket, Reply} ->
 		case analyze_packet(Reply, Identifier, PreData) of
-			{ok, Message, Data} -> {ok, Identifier, Data};
+			{ok, _Message, Data} -> {ok, Identifier, Data};
 			{uncomplete, Data} -> listener(Sock, Identifier, Data)
 		end
     after 10000 ->
@@ -142,13 +135,10 @@ analyze_packet(Packet, Identifier, OldData) when is_binary(Packet) ->
 		{ok, Message, Data} -> {ok, Message, Data}
 	end.
 
-process_messages(Messages, Identifier) ->
-	process_messages(Messages, Identifier, []).
-
 process_messages([], _, []) ->
  false;  
 
-process_messages([], Identifier, Data) ->
+process_messages([], _Identifier, Data) ->
 	{data, Data};   
 
 process_messages([H|T], Identifier, Data) ->
