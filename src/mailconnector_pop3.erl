@@ -59,6 +59,7 @@ action(Conn, stat) ->
     {ok, list_to_integer(binary_to_list(HighestID)), TotalSize}.
 
 
+
 action(Conn, fetch, Target) when is_integer(Target) ->
     action(Conn, fetch, integer_to_list(Target));
 action(Conn, fetch, Target) ->
@@ -77,6 +78,7 @@ action(Conn, pass, Password) ->
     send(Conn, Cmd),
     listener(Conn, 1).
 
+
 action(Conn, multifetch, 0, FetchedMails) ->
     FetchedMails;
 action(Conn, multifetch, ID, FetchedMails) ->
@@ -84,6 +86,7 @@ action(Conn, multifetch, ID, FetchedMails) ->
     action(Conn, multifetch, ID-1, [FetchedMail|FetchedMails]).
 
 send(Conn, Cmd) ->
+    io:format("Send -> ~p~n", [Cmd]),
     gen_tcp:send(Conn,list_to_binary(string:concat(Cmd,"\r\n"))).
 
 listener(Sock, unknown, Data) ->
@@ -116,7 +119,7 @@ listener(Sock, ResponseLength) when is_integer(ResponseLength) ->
                 X when X > 1 -> erlang:error(unexpected_resp_length);
                 X -> ok
             end,
-
+            io:format("Recieved -> ~p~n", [ActualResponse]),
             case binary:first(lists:last(ActualResponse)) of
                 43 -> {ok, ActualResponse}; % 43 == "+"
                 45 -> {error, ActualResponse} % 45 == "-"
