@@ -15,6 +15,7 @@ stop() ->
 
 init([Host, Port]) ->
     {ok, Sock} = gen_tcp:connect(Host, Port, [binary, {packet, 0}, {active, true}]),
+    listener(Sock, 1),
     {ok, #state{conn=Sock}}.
 
 handle_call(stop, _From, State) ->
@@ -39,12 +40,15 @@ handle_cast(_Command, State) ->
 handle_info(_Info, State) ->
     {noreply, State}.
 
-terminate(_Reason, _State) ->
+terminate(_Reason, State) ->
+    action(State#state.conn, quit),
     ok.
 
 code_change(_OldVsn, State, _Extra) ->
     {ok, State}.
 
+action(Conn, quit) ->
+    send(Conn, "QUIT");
 action(Conn, list) ->
     Cmd="LIST",
     send(Conn, Cmd),
@@ -86,7 +90,6 @@ action(Conn, multifetch, ID, FetchedMails) ->
     action(Conn, multifetch, ID-1, [FetchedMail|FetchedMails]).
 
 send(Conn, Cmd) ->
-    io:format("Send -> ~p~n", [Cmd]),
     gen_tcp:send(Conn,list_to_binary(string:concat(Cmd,"\r\n"))).
 
 listener(Sock, unknown, Data) ->
@@ -119,7 +122,6 @@ listener(Sock, ResponseLength) when is_integer(ResponseLength) ->
                 X when X > 1 -> erlang:error(unexpected_resp_length);
                 X -> ok
             end,
-            io:format("Recieved -> ~p~n", [ActualResponse]),
             case binary:first(lists:last(ActualResponse)) of
                 43 -> {ok, ActualResponse}; % 43 == "+"
                 45 -> {error, ActualResponse} % 45 == "-"
