@@ -2,33 +2,42 @@
 
 -behaviour(gen_server).
 
--export([start_link/1, stop/0, is_frontier/1, join_crlf/1]).
+-define(CON_OPTIONS, [binary, {packet, 0}, {active, true}]).
+
+-export([start_link/3, stop/0, is_frontier/1, join_crlf/1]).
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2, terminate/2, code_change/3]).
 
--record(state, {conn}).
+-record(state, {conn, type}).
 
-start_link(Host) ->
-    gen_server:start_link({global, Host}, ?MODULE, [Host, 110], []).
+
+start_link(Host,Port,ConnectionType) ->
+    gen_server:start_link({global, Host}, ?MODULE, [Host, Port, ConnectionType], []).
 
 stop() ->
 	gen_server:call(?MODULE, stop).
 
-init([Host, Port]) ->
-    {ok, Sock} = gen_tcp:connect(Host, Port, [binary, {packet, 0}, {active, true}]),
+init([Host, Port, ConnectionType]) ->
+    {ok, Sock} = connect_by_type(Host, Port, ConnectionType),
     listener(Sock, 1),
-    {ok, #state{conn=Sock}}.
+    {ok, #state{conn=Sock, type=ConnectionType}}.
+
+connect_by_type(Host, Port, ssl) ->
+    ssl:start(),
+    ssl:connect(Host, Port, ?CON_OPTIONS);
+connect_by_type(Host, Port, tcp) ->
+    gen_tcp:connect(Host, Port, ?CON_OPTIONS).
 
 handle_call(stop, _From, State) ->
 	{stop, normal, ok, State};
 
 handle_call({login, Username, Password}, _From, State) ->
-    {ok, _}=action(State#state.conn, user, Username),
-    {ok, _}=action(State#state.conn, pass, Password),
+    {ok, _}=action(State, user, Username),
+    {ok, _}=action(State, pass, Password),
     {reply, ok, State};
 
 handle_call(fetch_all, _From, State) ->
-    {ok, Amount, _}=action(State#state.conn, stat),
-    List=action(State#state.conn, multifetch, Amount),
+    {ok, Amount, _}=action(State, stat),
+    List=action(State, multifetch, Amount),
     {reply, List, State};
 
 handle_call(_Command, _From, _State) ->
@@ -41,22 +50,22 @@ handle_info(_Info, State) ->
     {noreply, State}.
 
 terminate(_Reason, State) ->
-    action(State#state.conn, quit),
+    action(State, quit),
     ok.
 
 code_change(_OldVsn, State, _Extra) ->
     {ok, State}.
 
-action(Conn, quit) ->
-    send(Conn, "QUIT");
-action(Conn, list) ->
+action(State, quit) ->
+    send(State, "QUIT");
+action(State, list) ->
     Cmd="LIST",
-    send(Conn, Cmd),
-    listener(Conn, unknown);
-action(Conn, stat) ->
+    send(State, Cmd),
+    listener(State#state.conn, unknown);
+action(State, stat) ->
     Cmd="STAT",
-    send(Conn, Cmd),
-    {ok, Output}=listener(Conn, 1),
+    send(State, Cmd),
+    {ok, Output}=listener(State#state.conn, 1),
     [UnwrappedOutput]=Output,
     SplittedOutput=binary:split(UnwrappedOutput,<<" ">>, [global]),
     [_,HighestID,TotalSize|_]=SplittedOutput,
@@ -64,37 +73,40 @@ action(Conn, stat) ->
 
 
 
-action(Conn, fetch, Target) when is_integer(Target) ->
-    action(Conn, fetch, integer_to_list(Target));
-action(Conn, fetch, Target) ->
+action(State, fetch, Target) when is_integer(Target) ->
+    action(State, fetch, integer_to_list(Target));
+action(State, fetch, Target) ->
     Cmd=string:join(["RETR", Target], " "),
-    send(Conn, Cmd),
-    {ok, Output}=listener(Conn, unknown),
+    send(State, Cmd),
+    {ok, Output}=listener(State, unknown),
     fetch:pass(mimemail:decode(Output));
-action(Conn, multifetch, ID) ->
-    action(Conn, multifetch, ID, []);
-action(Conn, user, Username) ->
+action(State, multifetch, ID) ->
+    action(State, multifetch, ID, []);
+action(State, user, Username) ->
     Cmd=string:join(["USER", Username], " "),
-    send(Conn, Cmd),
-    listener(Conn, 1);
-action(Conn, pass, Password) ->
+    send(State, Cmd),
+    listener(State#state.conn, 1);
+action(State, pass, Password) ->
     Cmd=string:join(["PASS", Password], " "),
-    send(Conn, Cmd),
-    listener(Conn, 1).
+    send(State, Cmd),
+    listener(State#state.conn, 1).
 
 
-action(Conn, multifetch, 0, FetchedMails) ->
+action(_, multifetch, 0, FetchedMails) ->
     FetchedMails;
-action(Conn, multifetch, ID, FetchedMails) ->
-    FetchedMail=action(Conn, fetch, ID),
-    action(Conn, multifetch, ID-1, [FetchedMail|FetchedMails]).
+action(State, multifetch, ID, FetchedMails) ->
+    FetchedMail=action(State, fetch, ID),
+    action(State, multifetch, ID-1, [FetchedMail|FetchedMails]).
 
-send(Conn, Cmd) ->
-    gen_tcp:send(Conn,list_to_binary(string:concat(Cmd,"\r\n"))).
+send(State, Cmd) ->
+    case State#state.type of
+        ssl -> ssl:send(State#state.conn,list_to_binary(string:concat(Cmd,"\r\n")));
+        tcp -> gen_tcp:send(State#state.conn,list_to_binary(string:concat(Cmd,"\r\n")))
+    end.
 
 listener(Sock, unknown, Data) ->
     receive
-        {tcp, _Sock, Reply} ->
+        {_, _Sock, Reply} ->
             SplittedResponse=binary:split(Reply, <<"\r\n">>, [global]),
             ParsedSplittedResponse=case Data of
                                        [] -> [_|X]=SplittedResponse, X;
@@ -115,7 +127,7 @@ listener(Sock, unknown) ->
     listener(Sock, unknown, []);
 listener(Sock, ResponseLength) when is_integer(ResponseLength) ->
     receive
-        {tcp, _Sock, Reply} ->
+        {_, _Sock, Reply} ->
             SplittedResponse=binary:split(Reply, <<"\r\n">>),
             ActualResponse=lists:reverse(lists:nthtail(ResponseLength, lists:reverse(SplittedResponse))),
             case lists:flatlength(SplittedResponse)-lists:flatlength(ActualResponse) of

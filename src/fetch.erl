@@ -82,8 +82,6 @@ find_by_mime_parameter(Parameter, MimeData) when is_list(MimeData) ->
                 end, [], MimeData);
 find_by_mime_parameter(_, _) ->
     [].
-                                
-
 
 decode_contents(Contents) ->
     lists:map(fun({Info, RawContent}) ->
