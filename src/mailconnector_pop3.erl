@@ -18,9 +18,6 @@ stop() ->
 
 init([Host, Port, ConnectionType]) ->
     {ok, Sock} = connect_by_type(Host, Port, ConnectionType),
-    application:start(bson),
-    application:start(mongodb),
-    iconv:start(),
     listener(Sock, 1),
     {ok, #state{conn=Sock, type=ConnectionType}}.
 
