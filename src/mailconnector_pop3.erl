@@ -18,6 +18,9 @@ stop() ->
 
 init([Host, Port, ConnectionType]) ->
     {ok, Sock} = connect_by_type(Host, Port, ConnectionType),
+    application:start(bson),
+    application:start(mongodb),
+    iconv:start(),
     listener(Sock, 1),
     {ok, #state{conn=Sock, type=ConnectionType}}.
 
@@ -104,6 +107,14 @@ send(State, Cmd) ->
         tcp -> gen_tcp:send(State#state.conn,list_to_binary(string:concat(Cmd,"\r\n")))
     end.
 
+remove_ascending_blankline([]) ->
+    [];
+remove_ascending_blankline([OneElement]) ->
+    [OneElement];
+remove_ascending_blankline(List) ->
+    [_|RemovedBlank]=lists:reverse(List),
+    RemovedBlank.
+
 listener(Sock, unknown, Data) ->
     receive
         {_, _Sock, Reply} ->
@@ -112,7 +123,7 @@ listener(Sock, unknown, Data) ->
                                        [] -> [_|X]=SplittedResponse, X;
                                        _ -> SplittedResponse
                                    end,
-            [_|RemovedBlank]=lists:reverse(ParsedSplittedResponse),
+            RemovedBlank=remove_ascending_blankline(ParsedSplittedResponse),
             [EndMark|ReversedReply]=RemovedBlank,
             CompactReply=lists:reverse(ReversedReply),
             case EndMark of
@@ -143,6 +154,10 @@ listener(Sock, ResponseLength) when is_integer(ResponseLength) ->
           timeout
     end.
 
+join_crlf([]) ->
+    [];
+join_crlf([X]) ->
+    list_to_binary([X]);
 join_crlf(ListofBin)->
     List=lists:map(fun(A) ->
                                   [<<"\r\n">>,A]

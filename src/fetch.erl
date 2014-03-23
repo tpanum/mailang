@@ -21,13 +21,13 @@ pass_header(RawHeader) ->
               end, [], RawHeader).
 
 pass_header_info({<<"Return-Path">>, V}) ->
-    {return_path, V};
+    {<<"return_path">>, V};
 pass_header_info({<<"To">>, V}) ->
-    {to, V};
+    {<<"to">>, V};
 pass_header_info({<<"From">>, V}) ->
-    {from, V};
+    {<<"from">>, V};
 pass_header_info({<<"Subject">>, V}) ->
-    {subject, V};
+    {<<"subject">>, V};
 pass_header_info(_) ->
     false.
 
@@ -50,7 +50,7 @@ pass_texts(ListofTexts)->
 pass_text({_,Type,_,Params,Body}) ->
     {_, ConParams}=lists:keyfind(<<"content-type-params">>, 1, Params),
     {_, Encoding}=lists:keyfind(<<"charset">>, 1, ConParams),
-    {texttype(Type),[{encoding, Encoding}], Body}.
+    {Type,[{<<"encoding">>, Encoding}], Body}.
 
 
 texttype(Type) ->

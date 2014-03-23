@@ -24,8 +24,6 @@ start_link() ->
 %% ===================================================================
 
 init([]) ->
-	Children = [
-	?CHILD(mailconnecter, worker)
-	],
+	Children = [],
     {ok, { {one_for_one, 5, 10}, Children} }.
 

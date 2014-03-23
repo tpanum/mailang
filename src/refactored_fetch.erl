@@ -54,17 +54,17 @@ pass_content([H|T],Delimiter,Header,ContentInfo,Content, CurrentContents) ->
 pass_header_line("* "++T) ->
     {match,[{_,_},{X,Y}]} = re:run(T,"([0-9a-zA-Z]+) FETCH",[]),
     UID = string:substr(T, X+1, Y),
-    {uid, UID};
+    {<<"uid">>, UID};
 pass_header_line("Return-Path: "++T) ->
-    {returnpath, T};
+    {<<"returnpath">>, T};
 pass_header_line("Delivered-To: "++T) ->
-    {delievered, T};
+    {<<"delievered">>, T};
 pass_header_line("From: "++T) ->
-    {from, T};
+    {<<"from">>, T};
 pass_header_line("Date: "++T) ->
-    {date, T};
+    {<<"date">>, T};
 pass_header_line("Subject: "++T) ->
-    {subject, T};
+    {<<"subject">>, T};
 pass_header_line("--"++T) ->
     case lists:reverse(T) of
         "--"++_ -> false;
