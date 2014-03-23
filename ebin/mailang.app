@@ -1,9 +1,0 @@
-{application,mailang,
-             [{description,[]},
-              {vsn,"1"},
-              {registered,[]},
-              {applications,[kernel,stdlib]},
-              {mod,{mailang_app,[]}},
-              {env,[]},
-              {modules,[fetch,mailang_app,mailang_sup,mailconnector,
-                        mailconnector_pop3,refactored_fetch,rfc2047]}]}.
