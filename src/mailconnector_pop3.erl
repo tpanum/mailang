@@ -127,8 +127,6 @@ listener(Sock, unknown, Data) ->
                 <<".">> -> {ok, list_to_binary([Data,join_crlf(CompactReply)])};
                     _ -> listener(Sock, unknown, list_to_binary([Data,join_crlf(ParsedSplittedResponse)]))
             end
-    after 5000 -> 
-            timeout
     end.
 
 listener(Sock, unknown) ->
@@ -146,9 +144,6 @@ listener(Sock, ResponseLength) when is_integer(ResponseLength) ->
                 43 -> {ok, ActualResponse}; % 43 == "+"
                 45 -> {error, ActualResponse} % 45 == "-"
             end
-            
-    after 5000 ->
-          timeout
     end.
 
 join_crlf([]) ->
